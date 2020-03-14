@@ -1,7 +1,9 @@
 module Main exposing (..)
 
 import Browser exposing (Document)
+import Dict exposing (Dict)
 import Html exposing (..)
+import Html.Events exposing (onInput)
 import Http
 import Json.Decode as D
 
@@ -20,17 +22,27 @@ main =
 
 
 type Model
-    = Products (List Product)
+    = ProductsLoaded State
     | Error String
     | Loading
+
+
+type alias State =
+    { products : Dict Id Product
+    , selected : Maybe Product
+    }
 
 
 
 -- product
 
 
+type alias Id =
+    String
+
+
 type alias Product =
-    { id : String
+    { id : Id
     , baseCurrency : String
     , quoteCurrency : String
     }
@@ -63,6 +75,7 @@ productDecoder =
 
 type Msg
     = GotProducts (Result Http.Error (List Product))
+    | ProductSelected Id
 
 
 
@@ -83,11 +96,26 @@ update msg model =
     case msg of
         GotProducts result ->
             case result of
-                Ok products ->
-                    ( Products products, Cmd.none )
+                Ok productList ->
+                    let
+                        products =
+                            Dict.fromList (List.map (\p -> ( p.id, p )) productList)
+                    in
+                    ( ProductsLoaded { products = products, selected = Nothing }, Cmd.none )
 
                 Err _ ->
                     ( Error "Something went wrong!", Cmd.none )
+
+        ProductSelected id ->
+            case model of
+                ProductsLoaded state ->
+                    ( ProductsLoaded { state | selected = Dict.get id state.products }, Cmd.none )
+
+                Error _ ->
+                    ( model, Cmd.none )
+
+                Loading ->
+                    ( model, Cmd.none )
 
 
 
@@ -105,21 +133,38 @@ view model =
             Error error ->
                 h2 [] [ text error ]
 
-            Products products ->
-                viewProducts products
+            ProductsLoaded state ->
+                div []
+                    [ productSelect (Dict.values state.products)
+                    , case state.selected of
+                        Just product ->
+                            productDetails product
+
+                        Nothing ->
+                            p [] [ text "select a product" ]
+                    ]
         ]
     }
 
 
-viewProducts : List Product -> Html Msg
-viewProducts products =
+productDetails : Product -> Html Msg
+productDetails product =
+    div []
+        [ h1 [] [ text product.id ]
+        , h3 [] [ text ("Base Currency: " ++ product.baseCurrency) ]
+        , h3 [] [ text ("Quote Currency: " ++ product.quoteCurrency) ]
+        ]
+
+
+productSelect : List Product -> Html Msg
+productSelect products =
     let
         sortedProducts =
             List.sortBy .baseCurrency products
     in
     div []
         [ h1 [] [ text "Products" ]
-        , ul [] (List.map (\p -> li [] [ text p.id ]) sortedProducts)
+        , select [ onInput ProductSelected ] (List.map (\p -> option [] [ text p.id ]) sortedProducts)
         ]
 
 
