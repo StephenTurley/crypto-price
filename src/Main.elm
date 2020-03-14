@@ -73,9 +73,13 @@ subscriptions _ =
 
 viewProducts : List Product -> Html Msg
 viewProducts products =
+    let
+        sortedProducts =
+            List.sortBy .baseCurrency products
+    in
     div []
         [ h1 [] [ text "Products" ]
-        , ul [] (List.map (\product -> li [] [ text product.id ]) products)
+        , ul [] (List.map (\p -> li [] [ text p.id ]) sortedProducts)
         ]
 
 
