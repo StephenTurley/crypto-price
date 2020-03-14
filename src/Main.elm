@@ -15,10 +15,18 @@ main =
         }
 
 
+
+-- model
+
+
 type Model
     = Products (List Product)
     | Error String
     | Loading
+
+
+
+-- product
 
 
 type alias Product =
@@ -26,61 +34,6 @@ type alias Product =
     , baseCurrency : String
     , quoteCurrency : String
     }
-
-
-type Msg
-    = GotProducts (Result Http.Error (List Product))
-
-
-init : () -> ( Model, Cmd Msg )
-init _ =
-    ( Loading, getProducts )
-
-
-update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
-    case msg of
-        GotProducts result ->
-            case result of
-                Ok products ->
-                    ( Products products, Cmd.none )
-
-                Err _ ->
-                    ( Error "Something went wrong!", Cmd.none )
-
-
-view : Model -> Document Msg
-view model =
-    { title = "Crypto Prices"
-    , body =
-        [ case model of
-            Loading ->
-                h2 [] [ text "Loading" ]
-
-            Error error ->
-                h2 [] [ text error ]
-
-            Products products ->
-                viewProducts products
-        ]
-    }
-
-
-subscriptions : Model -> Sub Msg
-subscriptions _ =
-    Sub.none
-
-
-viewProducts : List Product -> Html Msg
-viewProducts products =
-    let
-        sortedProducts =
-            List.sortBy .baseCurrency products
-    in
-    div []
-        [ h1 [] [ text "Products" ]
-        , ul [] (List.map (\p -> li [] [ text p.id ]) sortedProducts)
-        ]
 
 
 getProducts : Cmd Msg
@@ -102,3 +55,78 @@ productDecoder =
         (D.field "id" D.string)
         (D.field "base_currency" D.string)
         (D.field "quote_currency" D.string)
+
+
+
+-- message
+
+
+type Msg
+    = GotProducts (Result Http.Error (List Product))
+
+
+
+-- init
+
+
+init : () -> ( Model, Cmd Msg )
+init _ =
+    ( Loading, getProducts )
+
+
+
+-- update
+
+
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg model =
+    case msg of
+        GotProducts result ->
+            case result of
+                Ok products ->
+                    ( Products products, Cmd.none )
+
+                Err _ ->
+                    ( Error "Something went wrong!", Cmd.none )
+
+
+
+-- view
+
+
+view : Model -> Document Msg
+view model =
+    { title = "Crypto Prices"
+    , body =
+        [ case model of
+            Loading ->
+                h2 [] [ text "Loading" ]
+
+            Error error ->
+                h2 [] [ text error ]
+
+            Products products ->
+                viewProducts products
+        ]
+    }
+
+
+viewProducts : List Product -> Html Msg
+viewProducts products =
+    let
+        sortedProducts =
+            List.sortBy .baseCurrency products
+    in
+    div []
+        [ h1 [] [ text "Products" ]
+        , ul [] (List.map (\p -> li [] [ text p.id ]) sortedProducts)
+        ]
+
+
+
+--subscriptions
+
+
+subscriptions : Model -> Sub Msg
+subscriptions _ =
+    Sub.none
