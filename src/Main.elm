@@ -28,13 +28,17 @@ type Model
 
 
 type alias State =
-    { products : Dict Id Product
+    { catalog : ProductCatalog
     , selected : Maybe Product
     }
 
 
 
 -- product
+
+
+type alias ProductCatalog =
+    Dict Id Product
 
 
 type alias Id =
@@ -48,8 +52,13 @@ type alias Product =
     }
 
 
-getProducts : Cmd Msg
-getProducts =
+catalogFrom : List Product -> ProductCatalog
+catalogFrom products =
+    Dict.fromList (List.map (\p -> ( p.id, p )) products)
+
+
+fetchProducts : Cmd Msg
+fetchProducts =
     Http.get
         { url = "https://api.pro.coinbase.com/products"
         , expect = Http.expectJson GotProducts productsDecoder
@@ -84,7 +93,7 @@ type Msg
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( Loading, getProducts )
+    ( Loading, fetchProducts )
 
 
 
@@ -97,11 +106,7 @@ update msg model =
         GotProducts result ->
             case result of
                 Ok productList ->
-                    let
-                        products =
-                            Dict.fromList (List.map (\p -> ( p.id, p )) productList)
-                    in
-                    ( ProductsLoaded { products = products, selected = Nothing }, Cmd.none )
+                    ( ProductsLoaded (State (catalogFrom productList) Nothing), Cmd.none )
 
                 Err _ ->
                     ( Error "Something went wrong!", Cmd.none )
@@ -109,7 +114,7 @@ update msg model =
         ProductSelected id ->
             case model of
                 ProductsLoaded state ->
-                    ( ProductsLoaded { state | selected = Dict.get id state.products }, Cmd.none )
+                    ( ProductsLoaded { state | selected = Dict.get id state.catalog }, Cmd.none )
 
                 Error _ ->
                     ( model, Cmd.none )
@@ -135,7 +140,7 @@ view model =
 
             ProductsLoaded state ->
                 div []
-                    [ productSelect (Dict.values state.products)
+                    [ productSelect (Dict.values state.catalog)
                     , case state.selected of
                         Just product ->
                             productDetails product
@@ -159,12 +164,14 @@ productDetails product =
 productSelect : List Product -> Html Msg
 productSelect products =
     let
-        sortedProducts =
-            List.sortBy .baseCurrency products
+        options =
+            products
+                |> List.sortBy .baseCurrency
+                |> List.map (\p -> option [] [ text p.id ])
     in
     div []
         [ h1 [] [ text "Products" ]
-        , select [ onInput ProductSelected ] (List.map (\p -> option [] [ text p.id ]) sortedProducts)
+        , select [ onInput ProductSelected ] options
         ]
 
 
