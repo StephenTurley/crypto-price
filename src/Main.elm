@@ -30,6 +30,7 @@ type Model
 type alias State =
     { catalog : ProductCatalog
     , selected : Maybe Product
+    , ticker : Maybe Ticker
     }
 
 
@@ -43,6 +44,11 @@ type alias ProductCatalog =
 
 type alias Id =
     String
+
+
+type alias Ticker =
+    { price : String
+    }
 
 
 type alias Product =
@@ -78,12 +84,26 @@ productDecoder =
         (D.field "quote_currency" D.string)
 
 
+fetchTicker : Id -> Cmd Msg
+fetchTicker id =
+    Http.get
+        { url = "https://api.pro.coinbase.com/products/" ++ id ++ "/ticker"
+        , expect = Http.expectJson GotTicker tickerDecoder
+        }
+
+
+tickerDecoder : D.Decoder Ticker
+tickerDecoder =
+    D.map Ticker (D.field "price" D.string)
+
+
 
 -- message
 
 
 type Msg
     = GotProducts (Result Http.Error (List Product))
+    | GotTicker (Result Http.Error Ticker)
     | ProductSelected Id
 
 
@@ -106,7 +126,7 @@ update msg model =
         GotProducts result ->
             case result of
                 Ok productList ->
-                    ( ProductsLoaded (State (catalogFrom productList) Nothing), Cmd.none )
+                    ( ProductsLoaded (State (catalogFrom productList) Nothing Nothing), Cmd.none )
 
                 Err _ ->
                     ( Error "Something went wrong!", Cmd.none )
@@ -114,13 +134,29 @@ update msg model =
         ProductSelected id ->
             case model of
                 ProductsLoaded state ->
-                    ( ProductsLoaded { state | selected = Dict.get id state.catalog }, Cmd.none )
+                    ( ProductsLoaded { state | selected = Dict.get id state.catalog }, fetchTicker id )
 
                 Error _ ->
                     ( model, Cmd.none )
 
                 Loading ->
                     ( model, Cmd.none )
+
+        GotTicker result ->
+            case result of
+                Ok ticker ->
+                    case model of
+                        ProductsLoaded state ->
+                            ( ProductsLoaded { state | ticker = Just ticker }, Cmd.none )
+
+                        Error _ ->
+                            ( model, Cmd.none )
+
+                        Loading ->
+                            ( model, Cmd.none )
+
+                Err _ ->
+                    ( Error "Something went wrong!", Cmd.none )
 
 
 
@@ -166,7 +202,7 @@ productSelect products =
     let
         options =
             products
-                |> List.sortBy .baseCurrency
+                |> List.sortBy .id
                 |> List.map (\p -> option [] [ text p.id ])
     in
     div []
