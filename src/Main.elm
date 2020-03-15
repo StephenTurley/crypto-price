@@ -3,6 +3,7 @@ module Main exposing (init)
 import Browser exposing (Document)
 import Dict exposing (Dict)
 import Html exposing (..)
+import Html.Attributes exposing (value)
 import Html.Events exposing (onInput)
 import Http
 import Json.Decode as D
@@ -202,7 +203,7 @@ view model =
 
             ProductsLoaded state ->
                 div []
-                    [ productSelect (Dict.values state.catalog)
+                    [ productSelect state
                     , case state.selected of
                         Just product ->
                             productDetails product
@@ -229,17 +230,28 @@ productDetails product =
         ]
 
 
-productSelect : List Product -> Html Msg
-productSelect products =
+productSelect : State -> Html Msg
+productSelect state =
     let
-        options =
-            products
+        products =
+            state.catalog
+                |> Dict.values
                 |> List.sortBy .id
-                |> List.map (\p -> option [] [ text p.id ])
+
+        options =
+            List.map (\p -> option [] [ text p.id ]) products
+
+        selected =
+            case state.selected of
+                Just product ->
+                    product.id
+
+                Nothing ->
+                    ""
     in
     div []
         [ h1 [] [ text "Products" ]
-        , select [ onInput ProductSelected ] options
+        , select [ value selected, onInput ProductSelected ] options
         ]
 
 
