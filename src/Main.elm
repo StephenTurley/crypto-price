@@ -139,8 +139,22 @@ handleHttp result happyPath =
         Ok data ->
             happyPath data
 
-        Err _ ->
-            ( Error "Something went wrong!", Cmd.none )
+        Err error ->
+            case error of
+                Http.BadStatus status ->
+                    ( Error ("Server returned error " ++ String.fromInt status), Cmd.none )
+
+                Http.BadUrl msg ->
+                    ( Error msg, Cmd.none )
+
+                Http.BadBody msg ->
+                    ( Error msg, Cmd.none )
+
+                Http.Timeout ->
+                    ( Error "Request timed out", Cmd.none )
+
+                Http.NetworkError ->
+                    ( Error "Network Error", Cmd.none )
 
 
 updateProducts : List Product -> ( Model, Cmd Msg )
@@ -150,7 +164,7 @@ updateProducts productList =
 
 updateSelected : Id -> State -> ( Model, Cmd Msg )
 updateSelected id state =
-    ( ProductsLoaded { state | selected = Dict.get id state.catalog }, fetchTicker id )
+    ( ProductsLoaded { state | selected = Dict.get id state.catalog, ticker = Nothing }, fetchTicker id )
 
 
 updateTicker : Ticker -> State -> ( Model, Cmd Msg )
