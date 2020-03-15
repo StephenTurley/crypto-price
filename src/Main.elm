@@ -36,7 +36,7 @@ type Model
 
 type alias State =
     { catalog : ProductCatalog
-    , selected : Maybe Product
+    , selected : Maybe Id
     }
 
 
@@ -61,7 +61,7 @@ type alias Product =
     { id : Id
     , baseCurrency : String
     , quoteCurrency : String
-    , ticker : Maybe Ticker
+    , ticker : Ticker
     }
 
 
@@ -91,7 +91,7 @@ productDecoder =
         |> required "id" D.string
         |> required "base_currency" D.string
         |> required "quote_currency" D.string
-        |> hardcoded Nothing
+        |> hardcoded (Ticker "")
 
 
 fetchTicker : Id -> Cmd Msg
@@ -148,8 +148,8 @@ update msg model =
             updateState model <|
                 \s ->
                     case s.selected of
-                        Just product ->
-                            ( model, fetchTicker product.id )
+                        Just id ->
+                            ( model, fetchTicker id )
 
                         Nothing ->
                             ( model, Cmd.none )
@@ -186,14 +186,28 @@ updateProducts productList =
 
 updateSelected : Id -> State -> ( Model, Cmd Msg )
 updateSelected id state =
-    ( ProductsLoaded { state | selected = Dict.get id state.catalog }, fetchTicker id )
+    ( ProductsLoaded { state | selected = Just id }, fetchTicker id )
+
+
+updateProductTicker : Ticker -> Maybe Product -> Maybe Product
+updateProductTicker ticker product =
+    case product of
+        Just p ->
+            Just { p | ticker = ticker }
+
+        Nothing ->
+            Nothing
 
 
 updateTicker : Ticker -> State -> ( Model, Cmd Msg )
 updateTicker ticker state =
     case state.selected of
-        Just product ->
-            ( ProductsLoaded { state | selected = Just { product | ticker = Just ticker } }, Cmd.none )
+        Just id ->
+            let
+                updated =
+                    Dict.update id (updateProductTicker ticker) state.catalog
+            in
+            ( ProductsLoaded { state | catalog = updated }, Cmd.none )
 
         Nothing ->
             ( ProductsLoaded state, Cmd.none )
@@ -231,8 +245,13 @@ view model =
                 div []
                     [ productSelect state
                     , case state.selected of
-                        Just product ->
-                            productDetails product
+                        Just id ->
+                            case Dict.get id state.catalog of
+                                Just product ->
+                                    productDetails product
+
+                                Nothing ->
+                                    p [] [ text "select a product" ]
 
                         Nothing ->
                             p [] [ text "select a product" ]
@@ -243,20 +262,11 @@ view model =
 
 productDetails : Product -> Html Msg
 productDetails product =
-    let
-        price =
-            case product.ticker of
-                Just ticker ->
-                    ticker.price
-
-                Nothing ->
-                    ""
-    in
     div []
         [ h1 [] [ text product.id ]
         , h3 [] [ text ("Base Currency: " ++ product.baseCurrency) ]
         , h3 [] [ text ("Quote Currency: " ++ product.quoteCurrency) ]
-        , h3 [] [ text ("Price: " ++ price) ]
+        , h3 [] [ text ("Price: " ++ product.ticker.price) ]
         ]
 
 
@@ -272,12 +282,7 @@ productSelect state =
             List.map (\p -> option [] [ text p.id ]) products
 
         selected =
-            case state.selected of
-                Just product ->
-                    product.id
-
-                Nothing ->
-                    ""
+            Maybe.withDefault "" state.selected
     in
     div []
         [ h1 [] [ text "Products" ]
@@ -291,4 +296,4 @@ productSelect state =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Time.every 2000 Tick
+    Time.every 5000 Tick
