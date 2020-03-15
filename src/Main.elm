@@ -8,6 +8,7 @@ import Html.Events exposing (onInput)
 import Http
 import Json.Decode as D
 import Json.Decode.Pipeline exposing (hardcoded, required)
+import Time
 
 
 main =
@@ -112,6 +113,7 @@ type Msg
     = GotProducts (Result Http.Error (List Product))
     | GotTicker (Result Http.Error Ticker)
     | ProductSelected Id
+    | Tick Time.Posix
 
 
 
@@ -138,6 +140,17 @@ update msg model =
 
         GotTicker result ->
             handleHttp result (\ticker -> updateState model (updateTicker ticker))
+
+        Tick time ->
+            updateState model
+                (\s ->
+                    case s.selected of
+                        Just product ->
+                            ( model, fetchTicker product.id )
+
+                        Nothing ->
+                            ( model, Cmd.none )
+                )
 
 
 handleHttp : Result Http.Error data -> (data -> ( Model, Cmd Msg )) -> ( Model, Cmd Msg )
@@ -280,4 +293,4 @@ productSelect state =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Sub.none
+    Time.every 2000 Tick
