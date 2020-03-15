@@ -67,7 +67,9 @@ type alias Product =
 
 catalogFrom : List Product -> ProductCatalog
 catalogFrom products =
-    Dict.fromList (List.map (\p -> ( p.id, p )) products)
+    products
+        |> List.map (\p -> ( p.id, p ))
+        |> Dict.fromList
 
 
 fetchProducts : Cmd Msg
