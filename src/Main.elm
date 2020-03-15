@@ -191,11 +191,7 @@ updateSelected id state =
 
 updateTicker : Ticker -> State -> ( Model, Cmd Msg )
 updateTicker ticker state =
-    let
-        selected =
-            state.selected
-    in
-    case selected of
+    case state.selected of
         Just product ->
             ( ProductsLoaded { state | selected = Just { product | ticker = Just ticker } }, Cmd.none )
 
