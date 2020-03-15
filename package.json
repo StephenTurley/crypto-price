@@ -1,0 +1,23 @@
+{
+  "name": "crypto-price",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev" : "elm-live src/Main.elm --hot --open --start-page=index.html -- --debug --output=main.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/StephenTurley/crypto-price.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/StephenTurley/crypto-price/issues"
+  },
+  "homepage": "https://github.com/StephenTurley/crypto-price#readme",
+  "devDependencies": {
+    "elm-live": "^4.0.2"
+  }
+}

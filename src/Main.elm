@@ -183,6 +183,12 @@ view model =
 
                         Nothing ->
                             p [] [ text "select a product" ]
+                    , case state.ticker of
+                        Just ticker ->
+                            h3 [] [ text ("Price: " ++ ticker.price) ]
+
+                        Nothing ->
+                            div [] []
                     ]
         ]
     }
