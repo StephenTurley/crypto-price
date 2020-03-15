@@ -136,21 +136,21 @@ update msg model =
             handleHttp result updateProducts
 
         ProductSelected id ->
-            updateState model (updateSelected id)
+            updateState model <| updateSelected id
 
         GotTicker result ->
-            handleHttp result (\ticker -> updateState model (updateTicker ticker))
+            handleHttp result <|
+                \ticker -> updateState model <| updateTicker ticker
 
         Tick time ->
-            updateState model
-                (\s ->
+            updateState model <|
+                \s ->
                     case s.selected of
                         Just product ->
                             ( model, fetchTicker product.id )
 
                         Nothing ->
                             ( model, Cmd.none )
-                )
 
 
 handleHttp : Result Http.Error data -> (data -> ( Model, Cmd Msg )) -> ( Model, Cmd Msg )
