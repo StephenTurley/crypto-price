@@ -7,6 +7,7 @@ import Html.Attributes exposing (value)
 import Html.Events exposing (onInput)
 import Http
 import Json.Decode as D
+import Json.Decode.Pipeline exposing (hardcoded, required)
 
 
 main =
@@ -28,10 +29,13 @@ type Model
     | Loading
 
 
+
+-- TODO make selected a Maybe ID again and update products directly in the catalog
+
+
 type alias State =
     { catalog : ProductCatalog
     , selected : Maybe Product
-    , ticker : Maybe Ticker
     }
 
 
@@ -56,6 +60,7 @@ type alias Product =
     { id : Id
     , baseCurrency : String
     , quoteCurrency : String
+    , ticker : Maybe Ticker
     }
 
 
@@ -79,10 +84,11 @@ productsDecoder =
 
 productDecoder : D.Decoder Product
 productDecoder =
-    D.map3 Product
-        (D.field "id" D.string)
-        (D.field "base_currency" D.string)
-        (D.field "quote_currency" D.string)
+    D.succeed Product
+        |> required "id" D.string
+        |> required "base_currency" D.string
+        |> required "quote_currency" D.string
+        |> hardcoded Nothing
 
 
 fetchTicker : Id -> Cmd Msg
@@ -160,17 +166,26 @@ handleHttp result happyPath =
 
 updateProducts : List Product -> ( Model, Cmd Msg )
 updateProducts productList =
-    ( ProductsLoaded (State (catalogFrom productList) Nothing Nothing), Cmd.none )
+    ( ProductsLoaded (State (catalogFrom productList) Nothing), Cmd.none )
 
 
 updateSelected : Id -> State -> ( Model, Cmd Msg )
 updateSelected id state =
-    ( ProductsLoaded { state | selected = Dict.get id state.catalog, ticker = Nothing }, fetchTicker id )
+    ( ProductsLoaded { state | selected = Dict.get id state.catalog }, fetchTicker id )
 
 
 updateTicker : Ticker -> State -> ( Model, Cmd Msg )
 updateTicker ticker state =
-    ( ProductsLoaded { state | ticker = Just ticker }, Cmd.none )
+    let
+        selected =
+            state.selected
+    in
+    case selected of
+        Just product ->
+            ( ProductsLoaded { state | selected = Just { product | ticker = Just ticker } }, Cmd.none )
+
+        Nothing ->
+            ( ProductsLoaded state, Cmd.none )
 
 
 updateState : Model -> (State -> ( Model, Cmd Msg )) -> ( Model, Cmd Msg )
@@ -210,12 +225,6 @@ view model =
 
                         Nothing ->
                             p [] [ text "select a product" ]
-                    , case state.ticker of
-                        Just ticker ->
-                            h3 [] [ text ("Price: " ++ ticker.price) ]
-
-                        Nothing ->
-                            div [] []
                     ]
         ]
     }
@@ -223,10 +232,20 @@ view model =
 
 productDetails : Product -> Html Msg
 productDetails product =
+    let
+        price =
+            case product.ticker of
+                Just ticker ->
+                    ticker.price
+
+                Nothing ->
+                    ""
+    in
     div []
         [ h1 [] [ text product.id ]
         , h3 [] [ text ("Base Currency: " ++ product.baseCurrency) ]
         , h3 [] [ text ("Quote Currency: " ++ product.quoteCurrency) ]
+        , h3 [] [ text ("Price: " ++ price) ]
         ]
 
 
