@@ -1,4 +1,4 @@
-module Main exposing (..)
+module Main exposing (init)
 
 import Browser exposing (Document)
 import Dict exposing (Dict)
@@ -124,23 +124,28 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         GotProducts result ->
-            case result of
-                Ok productList ->
-                    ( ProductsLoaded (State (catalogFrom productList) Nothing Nothing), Cmd.none )
-
-                Err _ ->
-                    ( Error "Something went wrong!", Cmd.none )
+            handleHttp result updateProducts
 
         ProductSelected id ->
             updateState model (updateSelected id)
 
         GotTicker result ->
-            case result of
-                Ok ticker ->
-                    updateState model (updateTicker ticker)
+            handleHttp result (\ticker -> updateState model (updateTicker ticker))
 
-                Err _ ->
-                    ( Error "Something went wrong!", Cmd.none )
+
+handleHttp : Result Http.Error data -> (data -> ( Model, Cmd Msg )) -> ( Model, Cmd Msg )
+handleHttp result happyPath =
+    case result of
+        Ok data ->
+            happyPath data
+
+        Err _ ->
+            ( Error "Something went wrong!", Cmd.none )
+
+
+updateProducts : List Product -> ( Model, Cmd Msg )
+updateProducts productList =
+    ( ProductsLoaded (State (catalogFrom productList) Nothing Nothing), Cmd.none )
 
 
 updateSelected : Id -> State -> ( Model, Cmd Msg )
