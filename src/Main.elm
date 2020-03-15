@@ -30,10 +30,6 @@ type Model
     | Loading
 
 
-
--- TODO make selected a Maybe ID again and update products directly in the catalog
-
-
 type alias State =
     { catalog : ProductCatalog
     , selected : Maybe Id
