@@ -132,31 +132,38 @@ update msg model =
                     ( Error "Something went wrong!", Cmd.none )
 
         ProductSelected id ->
-            case model of
-                ProductsLoaded state ->
-                    ( ProductsLoaded { state | selected = Dict.get id state.catalog }, fetchTicker id )
-
-                Error _ ->
-                    ( model, Cmd.none )
-
-                Loading ->
-                    ( model, Cmd.none )
+            updateState model (updateSelected id)
 
         GotTicker result ->
             case result of
                 Ok ticker ->
-                    case model of
-                        ProductsLoaded state ->
-                            ( ProductsLoaded { state | ticker = Just ticker }, Cmd.none )
-
-                        Error _ ->
-                            ( model, Cmd.none )
-
-                        Loading ->
-                            ( model, Cmd.none )
+                    updateState model (updateTicker ticker)
 
                 Err _ ->
                     ( Error "Something went wrong!", Cmd.none )
+
+
+updateSelected : Id -> State -> ( Model, Cmd Msg )
+updateSelected id state =
+    ( ProductsLoaded { state | selected = Dict.get id state.catalog }, fetchTicker id )
+
+
+updateTicker : Ticker -> State -> ( Model, Cmd Msg )
+updateTicker ticker state =
+    ( ProductsLoaded { state | ticker = Just ticker }, Cmd.none )
+
+
+updateState : Model -> (State -> ( Model, Cmd Msg )) -> ( Model, Cmd Msg )
+updateState model updater =
+    case model of
+        ProductsLoaded state ->
+            updater state
+
+        Error _ ->
+            ( model, Cmd.none )
+
+        Loading ->
+            ( model, Cmd.none )
 
 
 
