@@ -2,9 +2,8 @@ module Main exposing (init)
 
 import Browser exposing (Document)
 import Dict exposing (Dict)
-import Html exposing (..)
-import Html.Attributes exposing (value)
-import Html.Events exposing (onInput)
+import Element exposing (..)
+import Element.Input as Input
 import Http
 import Json.Decode as D
 import Json.Decode.Pipeline exposing (hardcoded, required)
@@ -230,43 +229,43 @@ view : Model -> Document Msg
 view model =
     { title = "Crypto Prices"
     , body =
-        [ case model of
-            Loading ->
-                h2 [] [ text "Loading" ]
+        [ Element.layout [] <|
+            case model of
+                Loading ->
+                    el [] (text "Loading")
 
-            Error error ->
-                h2 [] [ text error ]
+                Error error ->
+                    el [] (text "Loading")
 
-            ProductsLoaded state ->
-                div []
-                    [ productSelect state
-                    , case state.selected of
-                        Just id ->
-                            case Dict.get id state.catalog of
-                                Just product ->
-                                    productDetails product
-
-                                Nothing ->
-                                    p [] [ text "select a product" ]
-
-                        Nothing ->
-                            p [] [ text "select a product" ]
-                    ]
+                ProductsLoaded state ->
+                    row [ width fill, spacing 20 ]
+                        [ column [ alignLeft ] [ productSelect state ]
+                        , column [ alignTop, centerX ] (productDetails state)
+                        ]
         ]
     }
 
 
-productDetails : Product -> Html Msg
-productDetails product =
-    div []
-        [ h1 [] [ text product.id ]
-        , h3 [] [ text ("Base Currency: " ++ product.baseCurrency) ]
-        , h3 [] [ text ("Quote Currency: " ++ product.quoteCurrency) ]
-        , h3 [] [ text ("Price: " ++ product.ticker.price) ]
-        ]
+productDetails : State -> List (Element Msg)
+productDetails state =
+    case state.selected of
+        Just id ->
+            case Dict.get id state.catalog of
+                Just product ->
+                    [ el [] (text product.id)
+                    , el [] (text ("Base Currency: " ++ product.baseCurrency))
+                    , el [] (text ("Quote Currency: " ++ product.quoteCurrency))
+                    , el [] (text ("Price: " ++ product.ticker.price))
+                    ]
+
+                Nothing ->
+                    [ none ]
+
+        Nothing ->
+            [ el [] (text "select a product") ]
 
 
-productSelect : State -> Html Msg
+productSelect : State -> Element Msg
 productSelect state =
     let
         products =
@@ -275,15 +274,14 @@ productSelect state =
                 |> List.sortBy .id
 
         options =
-            List.map (\p -> option [] [ text p.id ]) products
-
-        selected =
-            Maybe.withDefault "" state.selected
+            List.map (\p -> Input.option p.id (text p.id)) products
     in
-    div []
-        [ h1 [] [ text "Products" ]
-        , select [ value selected, onInput ProductSelected ] options
-        ]
+    Input.radio []
+        { label = Input.labelAbove [] (text "Products")
+        , onChange = ProductSelected
+        , selected = state.selected
+        , options = options
+        }
 
 
 
